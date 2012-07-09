@@ -288,7 +288,7 @@ module ::Development
 
         # either a directory definition or a general directory directive
         # directory definitions are multiplart, whereas general directory definitions are one part
-        parse_general_directory_or_named_directory_expression( expression_string )
+        parse_named_directory_expression( expression_string )
                 
       # - - remove general path
       when '-'
@@ -303,7 +303,7 @@ module ::Development
       # @ - location expression
       when '@'
 
-        parse_location_expression( expression_string )
+        parse_general_directory_or_location_expression( expression_string )
 
       # ! - enable/disable expression
       when '!'
@@ -321,25 +321,25 @@ module ::Development
     
   end
   
-  ################################################################
-  #  self.parse_general_directory_or_named_directory_expression  #
-  ################################################################
+  #########################################################
+  #  self.parse_general_directory_or_location_expression  #
+  #########################################################
   
   ###
-  # Parse expression string that has been determined as either a general path or directory expression.
+  # Parse expression string that has been determined as either a general path or location expression.
   #
   # @param expression_string
   #
-  #        String describing general path or directory expression.
+  #        String describing general path or location expression.
   #
   # @return [Object] Self.
   #
-  def self.parse_general_directory_or_named_directory_expression( expression_string )
+  def self.parse_general_directory_or_location_expression( expression_string )
     
     # if we have multiple parts
     if whitespace_index = expression_string =~ /\s/
       
-      parse_named_directory_expression( expression_string )
+      parse_location_expression( expression_string )
     
     # if we have one part
     else
@@ -688,7 +688,7 @@ module ::Development
     
     case expression_string[ 0 ]
       
-      when '+'
+      when '@'
 
         path_parts = expression_string.split( '/' )
         named_directory = path_parts.shift
@@ -769,7 +769,6 @@ module ::Development
           did_load = true
           
         else
-
           # look in each path for gem - use first to match
           @general_load_paths.each do |this_load_path|
 

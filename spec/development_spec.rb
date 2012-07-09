@@ -110,19 +110,19 @@ describe ::Development do
 
   end
 
-  ################################################################
-  #  self.parse_general_directory_or_named_directory_expression  #
-  ################################################################
+  #########################################################
+  #  self.parse_general_directory_or_location_expression  #
+  #########################################################
 
   it 'can parse a general path or named directory expression' do
 
-    ::Development.parse_general_directory_or_named_directory_expression( '/path/to/somewhere' )
-    ::Development.general_load_paths.include?( '/path/to/somewhere' ).should == true
-
-    ::Development.parse_general_directory_or_named_directory_expression( '+named_path ~/path/to/somewhere' )
+    ::Development.parse_named_directory_expression( '+named_path ~/path/to/somewhere' )
     ::Development.directory( :named_path ).should == ::File.expand_path( '~/path/to/somewhere' )
+
+    ::Development.parse_general_directory_or_location_expression( '@named_path some_gem, some_other_gem' )
+    ::Development.location( :named_path ).should == [ :some_gem, :some_other_gem ]
     
-    ::Development.parse_general_directory_or_named_directory_expression( '+named_path/path/to/somewhere' )
+    ::Development.parse_general_directory_or_location_expression( '@named_path/path/to/somewhere' )
     ::Development.general_load_paths.include?( ::File.expand_path( '~/path/to/somewhere/path/to/somewhere' ) ).should == true
     
   end
@@ -268,14 +268,25 @@ describe ::Development do
   
   it 'hooks require for registered gems' do
     
-    ::Development.load_configuration_file( 'example.development' )
-    
     ::Development.parse_configuration_expression( '+directory_name ./spec' )
     ::Development.parse_configuration_expression( '@directory_name require_mock' )
+    ::Development.parse_configuration_expression( '!enable require_mock' )
     
     defined?( ::Development::RequireMock ).should == nil
     require 'require_mock'
     defined?( ::Development::RequireMock ).should == 'constant'
+    
+  end
+
+  it 'hooks require for enable-all' do
+    
+    ::Development.parse_configuration_expression( '+directory_name ./spec' )
+    ::Development.parse_configuration_expression( '@directory_name' )
+    ::Development.parse_configuration_expression( '!enable' )
+    
+    defined?( ::Development::OtherRequireMock ).should == nil
+    require 'other_require_mock'
+    defined?( ::Development::OtherRequireMock ).should == 'constant'
     
   end
   
