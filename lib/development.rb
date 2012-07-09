@@ -214,9 +214,12 @@ module ::Development
     @enabled_gems.clear
     @disabled_gems.clear
     @gemsets.clear
+    @gem_locations.clear
     @general_load_paths.clear
     @loaded_gems.clear
     @named_directories.clear
+    @locations.clear
+    @enable_for_all = false
     
     return self
     
@@ -749,9 +752,17 @@ module ::Development
       when :enable
         
         if gems
-          gems.each do |this_gem, true_value|
-            @enabled_gems.push( this_gem )
-            @disabled_gems.delete( this_gem )
+          gems.each do |this_gem_or_gemset, true_value|
+            if gemset = @gemsets[ this_gem_or_gemset ]
+              gemset.each do |this_gem|
+                @enabled_gems.push( this_gem )
+                @disabled_gems.delete( this_gem )
+              end
+            else
+              this_gem = this_gem_or_gemset
+              @enabled_gems.push( this_gem )
+              @disabled_gems.delete( this_gem )
+            end
           end
         else
           @disabled_gems.delete_if do |this_gem, true_value|
@@ -764,9 +775,17 @@ module ::Development
       when :disable
 
         if gems
-          gems.each do |this_gem, true_value|
-            @disabled_gems.push( this_gem )
-            @enabled_gems.delete( this_gem )
+          gems.each do |this_gem_or_gemset, true_value|
+            if gemset = @gemsets[ this_gem_or_gemset ]
+              gemset.each do |this_gem|
+                @disabled_gems.push( this_gem )
+                @enabled_gems.delete( this_gem )
+              end
+            else
+              this_gem = this_gem_or_gemset
+              @disabled_gems.push( this_gem )
+              @enabled_gems.delete( this_gem )
+            end
           end
         else
           @enabled_gems.delete_if do |this_gem, true_value|
