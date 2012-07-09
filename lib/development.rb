@@ -263,7 +263,7 @@ module ::Development
       end
 
     end
-puts 'HERE: ' + expression_string.to_s
+
     parse_configuration_expression( expression_string )
     
   end
@@ -875,7 +875,6 @@ puts 'HERE: ' + expression_string.to_s
         # ensure we have 'gem-subname' rather than 'gem/subname'
         # we really just need one or the other consistently
         gem_directory_name = gem_name.gsub( '/', '-' )
-#        puts 'here!: ' + @enable_for_all.to_s
       
         # look for gem name in enabled gems/gemsets
         if @enabled_gems.include?( gem_name.to_sym ) or 
