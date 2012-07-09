@@ -222,27 +222,52 @@ describe ::Development do
   end
 
   #################################
+  #  self.gem_name_in_load_path?  #
+  #################################
+
+  it 'can find a gem name in a load path, meaning load path specifies the gem directory' do
+    ::Development.gem_name_in_load_path?( 'spec/mock_gem', 'mock_gem' ).should == true
+    ::Development.gem_name_in_load_path?( 'spec/mock_gem-subgem', 'mock_gem-subgem' ).should == true
+  end
+
+  #################################
   #  self.gem_name_at_load_path?  #
   #################################
 
-  it 'can find a gem name at a load path' do
+  it 'can find a gem name at a load path, meaning load path specifies the directory holding gem directory' do
     ::Development.gem_name_at_load_path?( 'spec', 'mock_gem' ).should == true
     ::Development.gem_name_at_load_path?( 'spec', 'mock_gem-subgem' ).should == true
   end
 
-  #############################
-  #  self.load_gem_from_path  #
-  #############################
+  ###########################
+  #  self.load_gem_in_path  #
+  ###########################
 
   it 'can load a gem from a development path' do
 
     defined?( ::Development::MockGem ).should == nil
-    ::Development.load_gem_from_path( 'spec', 'mock_gem' )
+    ::Development.load_gem_in_path( 'spec/mock_gem', 'mock_gem' )
     defined?( ::Development::MockGem ).should == 'constant'
 
     defined?( ::Development::MockGem::Subgem ).should == nil
-    ::Development.load_gem_from_path( 'spec', 'mock_gem-subgem' )
+    ::Development.load_gem_in_path( 'spec/mock_gem-subgem', 'mock_gem-subgem' )
     defined?( ::Development::MockGem::Subgem ).should == 'constant'
+    
+  end
+
+  ###########################
+  #  self.load_gem_at_path  #
+  ###########################
+
+  it 'can load a gem from a development path' do
+
+    defined?( ::Development::MockGem2 ).should == nil
+    ::Development.load_gem_at_path( 'spec', 'mock_gem2' )
+    defined?( ::Development::MockGem2 ).should == 'constant'
+
+    defined?( ::Development::MockGem2::Subgem2 ).should == nil
+    ::Development.load_gem_at_path( 'spec', 'mock_gem-subgem2' )
+    defined?( ::Development::MockGem2::Subgem2 ).should == 'constant'
     
   end
   
@@ -277,7 +302,7 @@ describe ::Development do
   ####################
   #  Object.require  #
   ####################
-  
+
   it 'hooks require for registered gems' do
     
     ::Development.parse_configuration_expression( '+directory_name ./spec' )
@@ -287,6 +312,18 @@ describe ::Development do
     defined?( ::Development::RequireMock ).should == nil
     require 'require_mock'
     defined?( ::Development::RequireMock ).should == 'constant'
+    
+  end
+  
+  it 'hooks require for registered gems' do
+    
+    ::Development.parse_configuration_expression( '+directory_name ./spec/require_mock2' )
+    ::Development.parse_configuration_expression( '@directory_name require_mock2' )
+    ::Development.parse_configuration_expression( '!enable require_mock2' )
+    
+    defined?( ::Development::RequireMock2 ).should == nil
+    require 'require_mock2'
+    defined?( ::Development::RequireMock2 ).should == 'constant'
     
   end
 

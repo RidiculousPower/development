@@ -894,32 +894,45 @@ module ::Development
         # ensure we have 'gem-subname' rather than 'gem/subname'
         # we really just need one or the other consistently
         gem_directory_name = gem_name.gsub( '/', '-' )
-      
+
         # look for gem name in enabled gems/gemsets
         if @enabled_gems.include?( gem_name.to_sym ) or 
            @enable_for_all && ! @disabled_gems.include?( gem_name.to_sym )
 
-          if directory_name = @gem_locations[ gem_name.to_sym ]   and
-             load_path = directory( directory_name )              and
-             gem_name_at_load_path?( load_path, gem_directory_name, true )
+          if directory_name = @gem_locations[ gem_name.to_sym ]
+
+            load_path = directory( directory_name )
           
-            load_gem_from_path( load_path, gem_directory_name )
-            @loaded_gems.push( gem_name.to_sym )
-            did_load = true
+            if gem_name_in_load_path?( load_path, gem_directory_name )
           
-          else
+              load_gem_in_path( load_path, gem_directory_name )
+              @loaded_gems.push( gem_name.to_sym )
+              did_load = true
+          
+            elsif gem_name_at_load_path?( load_path, gem_directory_name )
+            
+              load_gem_at_path( load_path, gem_directory_name )
+              @loaded_gems.push( gem_name.to_sym )
+              did_load = true
+            
+            end
+                    
+          end
+    
+          unless did_load
+          
             # look in each path for gem - use first to match
             @general_load_paths.each do |this_load_path|
 
               # look for gem name at load path
               if gem_name_at_load_path?( this_load_path, gem_name )
-                load_gem_from_path( this_load_path, gem_name )
+                load_gem_at_path( this_load_path, gem_name )
                 @loaded_gems.push( gem_name.to_sym )
                 did_load = true
               end
 
             end
-        
+      
           end
     
         end
@@ -933,11 +946,46 @@ module ::Development
   end
 
   #################################
+  #  self.gem_name_in_load_path?  #
+  #################################
+  
+  ###
+  # Query whether gem name is present in load path, meaning load path specifies the gem directory.
+  #
+  # @param load_path 
+  #
+  #        Path where gem directory might be located.
+  #
+  # @param gem_directory_name 
+  #
+  #        Name of gem. Assumes gem-subname is used rather than gem/subname.
+  #
+  # @return [true,false] Whether gem name is present.
+  #
+  def self.gem_name_in_load_path?( gem_path, gem_directory_name, require_gem_at_path = false )
+    
+    exists_at_load_path = false
+    
+    gem_name = gem_directory_name.gsub( '-', '/' )
+    
+    gem_require_file = ::File.join( gem_path, 'lib', gem_name ) + '.rb'
+    
+    if ::File.exist?( ::File.expand_path( gem_require_file ) )
+      
+      exists_at_load_path = true
+    
+    end
+    
+    return exists_at_load_path
+    
+  end
+
+  #################################
   #  self.gem_name_at_load_path?  #
   #################################
   
   ###
-  # Query whether gem name is present at load path.
+  # Query whether gem name is present at load path, meaning load path specifies the directory holding gem directory.
   #
   # @param load_path 
   #
@@ -968,13 +1016,13 @@ module ::Development
     return exists_at_load_path
     
   end
-  
-  #############################
-  #  self.load_gem_from_path  #
-  #############################
+
+  ###########################
+  #  self.load_gem_in_path  #
+  ###########################
   
   ###
-  # Load gem from gem path. Assumes gem is present at path.
+  # Load gem from gem directory path. Assumes gem is present in path.
   #
   # @param load_path 
   #
@@ -986,7 +1034,33 @@ module ::Development
   #
   # @return [true,false] Whether gem name is present.
   #
-  def self.load_gem_from_path( load_path, gem_directory_name )
+  def self.load_gem_in_path( gem_path, gem_directory_name )
+        
+    gem_name = gem_directory_name.gsub( '-', '/' )
+    
+    gem_require_file = ::File.join( gem_path, 'lib', gem_name ) + '.rb'
+    require_relative( ::File.expand_path( gem_require_file ) )
+    
+  end
+  
+  ###########################
+  #  self.load_gem_at_path  #
+  ###########################
+  
+  ###
+  # Load gem from path to directory holding gem directory. Assumes gem is present at path.
+  #
+  # @param load_path 
+  #
+  #        Path where gem directory might be located.
+  #
+  # @param gem_directory_name 
+  #
+  #        Name of gem. Assumes gem-subname is used rather than gem/subname.
+  #
+  # @return [true,false] Whether gem name is present.
+  #
+  def self.load_gem_at_path( load_path, gem_directory_name )
         
     gem_name = gem_directory_name.gsub( '-', '/' )
     gem_path = ::File.join( load_path, gem_directory_name )
