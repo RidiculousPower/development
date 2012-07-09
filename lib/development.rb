@@ -29,6 +29,15 @@ module ::Development
   #  self.directory  #
   ####################
   
+  ###
+  # Return path for directory name.
+  #
+  # @param directory_name
+  #
+  #        Name of named directory.
+  #
+  # @return [String] Directory path associated with directory name.
+  #
   def self.directory( directory_name )
 
     return @named_directories[ directory_name.to_sym ]
@@ -39,6 +48,11 @@ module ::Development
   #  self.general_load_paths  #
   #############################
   
+  ###
+  # Get Array of paths that will be used for general loading purposes if a specific gem path is not given.
+  #
+  # @return [Array<String>] Paths to be used for general loading purposes.
+  #
   def self.general_load_paths
 
     return @general_load_paths
@@ -49,6 +63,11 @@ module ::Development
   #  self.named_directories  #
   ############################
   
+  ###
+  # Get Hash of named directory names to paths.
+  #
+  # @return [Hash{Symbol=>String}]
+  #
   def self.named_directories
 
     return @named_directories
@@ -59,6 +78,11 @@ module ::Development
   #  self.enabled_for_all?  #
   ###########################
   
+  ###
+  # Query whether Development is set to search in general paths for any gem, even if not explicitly enabled.
+  #
+  # @return [true,false] Whether general gem search is enabled.
+  #
   def self.enabled_for_all?
     
     return @enable_for_all
@@ -69,6 +93,11 @@ module ::Development
   #  self.enabled_gems  #
   #######################
   
+  ###
+  # Get gems that have been explicitly enabled.
+  #
+  # @return [Array<Symbol>] Array of gem or gemset names.
+  #
   def self.enabled_gems
     
     return @enabled_gems
@@ -79,6 +108,11 @@ module ::Development
   #  self.disabled_gems  #
   ########################
   
+  ###
+  # Get gems that have been explicitly disabled.
+  #
+  # @return [Array<Symbol>] Array of gem or gemset names.
+  #
   def self.disabled_gems
 
     return @disabled_gems
@@ -89,6 +123,11 @@ module ::Development
   #  self.gemsets  #
   ##################
   
+  ###
+  # Get hash of gemsets and their gem or gemset members.
+  #
+  # @return [Hash{Symbol=>Array<Symbol>}] Hash of gemsets and their gem or gemset members.
+  #
   def self.gemsets
     
     return @gemsets
@@ -99,6 +138,11 @@ module ::Development
   #  self.locations  #
   ####################
   
+  ###
+  # Hash of locations and the gems or gemsets located at each.
+  #
+  # @return [Hash{Symbol=>Array{String}] 
+  #
   def self.locations
     
     return @locations
@@ -109,6 +153,15 @@ module ::Development
   #  self.location  #
   ###################
   
+  ###
+  # Get gems or gemsets associated with location.
+  #
+  # @param location_name
+  #
+  #        Name of location.
+  #
+  # @return [Array<Symbol>]
+  #
   def self.location( location_name )
     
     return @locations[ location_name.to_sym ]
@@ -151,6 +204,11 @@ module ::Development
   #  self.clear  #
   ################
   
+  ###
+  # Reset internal tracking variables.
+  #
+  # @return [Development] Self.
+  #
   def self.clear
     
     @enabled_gems.clear
@@ -159,6 +217,8 @@ module ::Development
     @general_load_paths.clear
     @loaded_gems.clear
     @named_directories.clear
+    
+    return self
     
   end
   
@@ -425,6 +485,15 @@ module ::Development
   #  self.parse_base_action_from_expression_string  #
   ###################################################
   
+  ###
+  # Parse signal character (+, -, =, @, !) and base action string from expression.
+  #
+  # @param expression_string
+  #
+  #        Expression string.
+  #
+  # @return [String] Base action string.
+  #
   def self.parse_base_action_from_expression_string( expression_string )
     
     base_action = nil
@@ -449,6 +518,23 @@ module ::Development
   #  self.parse_gem_names_from_expression_string  #
   #################################################
 
+  ###
+  # Parse gem name list separated by optional comma and white space from expression.
+  #
+  # @param array
+  #
+  #        Array to add parsed data to.
+  #
+  # @param expression_string
+  #
+  #        Expression string.
+  #
+  # @param require_exist [true,false]
+  #
+  #        Raise exception if gems do not exist.
+  #
+  # @return [Development] Self.
+  #
   def self.parse_gem_names_from_expression_string( array, expression_string, require_exist = false )
 
     while next_whitespace_index = expression_string =~ /\s/
@@ -458,6 +544,8 @@ module ::Development
     # also slice till the end
     parse_gem_name_from_expression_string( array, expression_string, expression_string.length, require_exist )
     
+    return self
+    
   end
 
   ################################################
@@ -466,6 +554,10 @@ module ::Development
   
   ###
   # Helper method to slice gem name from expression string and add or subtract from gemset.
+  #
+  # @param array
+  #
+  #        Array to add parsed data to.
   #
   # @param gemset
   #
@@ -478,6 +570,12 @@ module ::Development
   # @param slice_to_index
   #
   #        Index to slice expression string to.
+  #
+  # @param require_exist [true,false]
+  #
+  #        Raise exception if gems do not exist.
+  #
+  # @return [Symbol] Parsed gem name.
   #
   def self.parse_gem_name_from_expression_string( array, expression_string, slice_to_index, require_exist = false )
     
@@ -532,6 +630,15 @@ module ::Development
   #  self.create_gemset  #
   ########################
   
+  ###
+  # Create gemset with name.
+  #
+  # @param gemset_name
+  #
+  #        Name of gemset.
+  #
+  # @return [Array] Gemset.
+  #
   def self.create_gemset( gemset_name )
 
     gemset_name = gemset_name.to_sym
@@ -548,6 +655,15 @@ module ::Development
   #  self.gemset  #
   #################
   
+  ###
+  # Get gemset with name.
+  #
+  # @param gemset_name
+  #
+  #        Name of gemset.
+  #
+  # @return [Array] Gemset.
+  #
   def self.gemset( gemset_name )
     
     return @gemsets[ gemset_name.to_sym ]
