@@ -1,0 +1,4 @@
+
+class ::Development::MockGem
+
+end
