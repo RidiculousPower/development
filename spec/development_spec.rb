@@ -49,6 +49,8 @@ describe ::Development do
 
   it 'can parse an enable/disable expression' do
 
+    ::Development.parse_gemset_expression( '=some_gemset some_gem, some_other_gem, some_gemset' )
+
     ::Development.parse_enable_disable_expression( '!enable some_gem, some_other_gem, some_gemset' )
     ::Development.enabled_for_all?.should == false
     ::Development.enabled_gems.should == [ :some_gem, :some_other_gem, :some_gemset ]
@@ -78,6 +80,16 @@ describe ::Development do
     ::Development.enabled_for_all?.should == false
     ::Development.enabled_gems.should == [ ]
     ::Development.disabled_gems.should == [ :some_gemset, :some_gem, :some_other_gem ]
+  
+    ::Development.parse_enable_disable_expression( '!enable some_gemset' )
+    ::Development.enabled_for_all?.should == false
+    ::Development.enabled_gems.should == [ :some_gem, :some_other_gem, :some_gemset ]
+    ::Development.disabled_gems.should == [ ]
+
+    ::Development.parse_enable_disable_expression( '!disable' )
+    ::Development.enabled_for_all?.should == false
+    ::Development.enabled_gems.should == [ ]
+    ::Development.disabled_gems.should == [ :some_gem, :some_other_gem, :some_gemset ]
     
   end
   
