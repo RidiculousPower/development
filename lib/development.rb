@@ -1092,6 +1092,11 @@ require_relative 'development/exception/malformed_expression/malformed_remove_ge
 #
 class ::Object
   include ::Development::Require
+  extend ::Development::Require
+end
+
+if defined?( ::Bundler )
+  ::Development::Require::BundlerSupport.call
 end
 
 ::Development.load_configuration_file( ::File.join( '~', ::Development::ConfigurationFileName ) )
