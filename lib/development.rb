@@ -21,7 +21,7 @@ module ::Development
   #
   def loaded?( gem_name )
     
-    return @loaded_gems.include?( gem_name )
+    return @loaded_gems.include?( gem_name.to_sym )
     
   end
   
@@ -862,44 +862,51 @@ module ::Development
   #
   def self.require( gem_name_or_path )
     
-    did_load = false
+    did_load = nil
 
     # if our path ends with an extension we are not requiring a gem and thus not responsible for managing it
     if ::File.extname( gem_name_or_path ).empty?
 
       gem_name = gem_name_or_path.to_s
       
-      # ensure we have 'gem-subname' rather than 'gem/subname'
-      # we really just need one or the other consistently
-      gem_directory_name = gem_name.gsub( '/', '-' )
+      if @loaded_gems.include?( gem_name.to_sym )
+        did_load = false
+      else
+        # ensure we have 'gem-subname' rather than 'gem/subname'
+        # we really just need one or the other consistently
+        gem_directory_name = gem_name.gsub( '/', '-' )
       
-      # look for gem name in enabled gems/gemsets
-      if @enabled_gems.include?( gem_name.to_sym ) or 
-         @enable_for_all && ! @disabled_gems.include?( gem_name.to_sym )
+        # look for gem name in enabled gems/gemsets
+        if @enabled_gems.include?( gem_name.to_sym ) or 
+           @enable_for_all && ! @disabled_gems.include?( gem_name.to_sym )
 
-        if directory_name = @gem_locations[ gem_name.to_sym ]   and
-           load_path = directory( directory_name )              and
-           gem_name_at_load_path?( load_path, gem_directory_name, true )
+          if directory_name = @gem_locations[ gem_name.to_sym ]   and
+             load_path = directory( directory_name )              and
+             gem_name_at_load_path?( load_path, gem_directory_name, true )
           
-          load_gem_from_path( load_path, gem_directory_name )
-          did_load = true
+            load_gem_from_path( load_path, gem_directory_name )
+            @loaded_gems.push( gem_name.to_sym )
+            did_load = true
           
-        else
-          # look in each path for gem - use first to match
-          @general_load_paths.each do |this_load_path|
+          else
+            # look in each path for gem - use first to match
+            @general_load_paths.each do |this_load_path|
 
-            # look for gem name at load path
-            if gem_name_at_load_path?( this_load_path, gem_name )
-              load_gem_from_path( this_load_path, gem_name )
-              did_load = true
+              # look for gem name at load path
+              if gem_name_at_load_path?( this_load_path, gem_name )
+                load_gem_from_path( this_load_path, gem_name )
+                @loaded_gems.push( gem_name.to_sym )
+                did_load = true
+              end
+
             end
-
-          end
         
-        end
+          end
     
+        end
+        
       end
-
+      
     end
     
     return did_load

@@ -22,9 +22,9 @@ module ::Development::Require
   #
   def require( gem_name_or_path )
     
-    did_load = false
+    did_load = ::Development.require( gem_name_or_path )
     
-    unless did_load = ::Development.require( gem_name_or_path )
+    if did_load.nil?
       did_load = super
     end
     
