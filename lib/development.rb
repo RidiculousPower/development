@@ -263,7 +263,7 @@ module ::Development
       end
 
     end
-
+puts 'HERE: ' + expression_string.to_s
     parse_configuration_expression( expression_string )
     
   end
@@ -868,13 +868,14 @@ module ::Development
     if ::File.extname( gem_name_or_path ).empty?
 
       gem_name = gem_name_or_path.to_s
-      
+
       if @loaded_gems.include?( gem_name.to_sym )
         did_load = false
       else
         # ensure we have 'gem-subname' rather than 'gem/subname'
         # we really just need one or the other consistently
         gem_directory_name = gem_name.gsub( '/', '-' )
+#        puts 'here!: ' + @enable_for_all.to_s
       
         # look for gem name in enabled gems/gemsets
         if @enabled_gems.include?( gem_name.to_sym ) or 
@@ -1001,4 +1002,4 @@ class ::Object
   include ::Development::Require
 end
 
-#::Development.load_configuration_file( ::File.join( '~', ConfigurationFileName ) )
+::Development.load_configuration_file( ::File.join( '~', ::Development::ConfigurationFileName ) )
