@@ -1,6 +1,4 @@
 
-require 'array-unique'
-
 ###
 # Singleton that manages configurations and requires.
 #
@@ -21,7 +19,7 @@ module ::Development
   #
   def loaded?( gem_name )
     
-    return @loaded_gems.include?( gem_name.to_sym )
+    return @loaded_gems.has_key?( gem_name.to_sym )
     
   end
   
@@ -100,7 +98,7 @@ module ::Development
   #
   def self.enabled_gems
     
-    return @enabled_gems
+    return @enabled_gems.keys
     
   end
 
@@ -115,7 +113,7 @@ module ::Development
   #
   def self.disabled_gems
 
-    return @disabled_gems
+    return @disabled_gems.keys
 
   end
 
@@ -185,15 +183,15 @@ module ::Development
   #
   ConfigurationFileName = '.development'
   
-  @enabled_gems = ::Array::Unique.new
-  @disabled_gems = ::Array::Unique.new
+  @enabled_gems = { }
+  @disabled_gems = { }
   
   @gemsets = { }
   @gem_locations = { }
   
-  @general_load_paths = ::Array::Unique.new
+  @general_load_paths = [ ]
 
-  @loaded_gems = ::Array::Unique.new
+  @loaded_gems = { }
 
   @named_directories = { }
   @locations = { }
@@ -524,9 +522,9 @@ module ::Development
   ###
   # Parse gem name list separated by optional comma and white space from expression.
   #
-  # @param array
+  # @param hash
   #
-  #        Array to add parsed data to.
+  #        Hash to add parsed data to.
   #
   # @param expression_string
   #
@@ -538,14 +536,14 @@ module ::Development
   #
   # @return [Development] Self.
   #
-  def self.parse_gem_names_from_expression_string( array, expression_string, require_exist = false )
+  def self.parse_gem_names_from_expression_string( hash, expression_string, require_exist = false )
 
     while next_whitespace_index = expression_string =~ /\s/
-      parse_gem_name_from_expression_string( array, expression_string, next_whitespace_index )
+      parse_gem_name_from_expression_string( hash, expression_string, next_whitespace_index )
     end
 
     # also slice till the end
-    parse_gem_name_from_expression_string( array, expression_string, expression_string.length, require_exist )
+    parse_gem_name_from_expression_string( hash, expression_string, expression_string.length, require_exist )
     
     return self
     
@@ -558,9 +556,9 @@ module ::Development
   ###
   # Helper method to slice gem name from expression string and add or subtract from gemset.
   #
-  # @param array
+  # @param hash
   #
-  #        Array to add parsed data to.
+  #        Hash to add parsed data to.
   #
   # @param gemset
   #
@@ -580,7 +578,7 @@ module ::Development
   #
   # @return [Symbol] Parsed gem name.
   #
-  def self.parse_gem_name_from_expression_string( array, expression_string, slice_to_index, require_exist = false )
+  def self.parse_gem_name_from_expression_string( hash, expression_string, slice_to_index, require_exist = false )
     
     gem_name = expression_string.slice!( 0, slice_to_index )
 
@@ -598,7 +596,7 @@ module ::Development
           gem_name.slice!( 0, 1 )
         when '-'
           gem_name.slice!( 0, 1 )
-          array.delete( gem_name.to_sym )
+          hash.delete( gem_name.to_sym )
           should_add = false
         else
       end
@@ -618,7 +616,7 @@ module ::Development
       end
 
       if should_add
-        array.push( gem_name )
+        hash[ gem_name ] = true
       end
       
       expression_string.strip!
@@ -647,7 +645,7 @@ module ::Development
     gemset_name = gemset_name.to_sym
     
     unless gemset = @gemsets[ gemset_name ]
-      @gemsets[ gemset_name ] = gemset = ::Array::Unique.new
+      @gemsets[ gemset_name ] = gemset = { }
     end
     
     return gemset
@@ -669,7 +667,13 @@ module ::Development
   #
   def self.gemset( gemset_name )
     
-    return @gemsets[ gemset_name.to_sym ]
+    gemset_members = nil  
+    
+    if gemset = @gemsets[ gemset_name.to_sym ]
+      gemset_members = gemset.keys
+    end
+    
+    return gemset_members
     
   end
 
@@ -699,14 +703,14 @@ module ::Development
     end
     
     unless directory_members = @locations[ directory_name ]
-      @locations[ directory_name ] = directory_members = ::Array::Unique.new
+      @locations[ directory_name ] = directory_members = { }
     end
     
     parse_gem_names_from_expression_string( directory_members, expression_string )
     
-    directory_members.each do |this_gem_or_gemset|
+    directory_members.each do |this_gem_or_gemset, true_value|
       if gemset = @gemsets[ this_gem_or_gemset ]
-        gemset.each do |this_gem|
+        gemset.each do |this_gem, true_value|
           @gem_locations[ this_gem ] = directory_name
         end
       else
@@ -743,7 +747,7 @@ module ::Development
     
     gems = nil
     unless expression_string.empty?
-      gems = ::Array::Unique.new
+      gems = { }
       parse_gem_names_from_expression_string( gems, expression_string )
     end
     
@@ -754,19 +758,19 @@ module ::Development
         if gems
           gems.each do |this_gem_or_gemset, true_value|
             if gemset = @gemsets[ this_gem_or_gemset ]
-              gemset.each do |this_gem|
-                @enabled_gems.push( this_gem )
+              gemset.each do |this_gem, true_value|
+                @enabled_gems[ this_gem ] = true
                 @disabled_gems.delete( this_gem )
               end
             else
               this_gem = this_gem_or_gemset
-              @enabled_gems.push( this_gem )
+              @enabled_gems[ this_gem ] = true
               @disabled_gems.delete( this_gem )
             end
           end
         else
           @disabled_gems.delete_if do |this_gem, true_value|
-            @enabled_gems.push( this_gem )
+            @enabled_gems[ this_gem ] = true
             true
           end
           @enable_for_all = true
@@ -777,19 +781,19 @@ module ::Development
         if gems
           gems.each do |this_gem_or_gemset, true_value|
             if gemset = @gemsets[ this_gem_or_gemset ]
-              gemset.each do |this_gem|
-                @disabled_gems.push( this_gem )
+              gemset.each do |this_gem, true_value|
+                @disabled_gems[ this_gem ] = true
                 @enabled_gems.delete( this_gem )
               end
             else
               this_gem = this_gem_or_gemset
-              @disabled_gems.push( this_gem )
+              @disabled_gems[ this_gem ] = true
               @enabled_gems.delete( this_gem )
             end
           end
         else
           @enabled_gems.delete_if do |this_gem, true_value|
-            @disabled_gems.push( this_gem )
+            @disabled_gems[ this_gem ] = true
             true
           end 
           @enable_for_all = false
@@ -888,11 +892,12 @@ module ::Development
 
       gem_name = gem_name_or_path.to_s
 
-      if @loaded_gems.include?( gem_name.to_sym )
+      if @loaded_gems.has_key?( gem_name.to_sym )
         did_load = false
       else
         # ensure we have 'gem-subname' rather than 'gem/subname'
         # we really just need one or the other consistently
+        gem_name = gem_name.gsub( '/', '-' )
         gem_directory_name = gem_name.gsub( '/', '-' )
 
         # look for gem name in enabled gems/gemsets
@@ -906,13 +911,13 @@ module ::Development
             if gem_name_in_load_path?( load_path, gem_directory_name )
           
               load_gem_in_path( load_path, gem_directory_name )
-              @loaded_gems.push( gem_name.to_sym )
+              @loaded_gems[ gem_name.to_sym ] = true
               did_load = true
           
             elsif gem_name_at_load_path?( load_path, gem_directory_name )
             
               load_gem_at_path( load_path, gem_directory_name )
-              @loaded_gems.push( gem_name.to_sym )
+              @loaded_gems[ gem_name.to_sym ] = true
               did_load = true
             
             end
@@ -927,7 +932,7 @@ module ::Development
               # look for gem name at load path
               if gem_name_at_load_path?( this_load_path, gem_name )
                 load_gem_at_path( this_load_path, gem_name )
-                @loaded_gems.push( gem_name.to_sym )
+                @loaded_gems[ gem_name.to_sym ] = true
                 did_load = true
               end
 

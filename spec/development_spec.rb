@@ -132,7 +132,7 @@ describe ::Development do
     ::Development.directory( :named_path ).should == ::File.expand_path( '~/path/to/somewhere' )
 
     ::Development.parse_general_directory_or_location_expression( '@named_path some_gem, some_other_gem' )
-    ::Development.location( :named_path ).should == [ :some_gem, :some_other_gem ]
+    ::Development.location( :named_path ).should == { :some_gem => true, :some_other_gem => true }
     
     ::Development.parse_general_directory_or_location_expression( '@named_path/path/to/somewhere' )
     ::Development.general_load_paths.include?( ::File.expand_path( '~/path/to/somewhere/path/to/somewhere' ) ).should == true
@@ -290,9 +290,9 @@ describe ::Development do
     ::Development.directory( :hooked_objects ).should == ::File.expand_path( '~/Projects/rp/ruby/hooked_objects' )
     ::Development.directory( :compositing_objects ).should == ::File.expand_path( '~/Projects/rp/ruby/compositing_objects' )
 
-    ::Development.location( :hooked_objects ).should == [ :hooked_objects ]
-    ::Development.location( :compositing_objects ).should == [ :compositing_objects ]
-    ::Development.location( :ridiculous_power ).should == [ :ridiculous_power ]
+    ::Development.location( :hooked_objects ).should == { :hooked_objects => true }
+    ::Development.location( :compositing_objects ).should == { :compositing_objects => true }
+    ::Development.location( :ridiculous_power ).should == { :ridiculous_power => true }
     
     ::Development.enabled_gems.should == [ ]
     ::Development.enabled_for_all?.should == true
