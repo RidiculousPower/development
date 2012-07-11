@@ -11,3 +11,6 @@ Directories can now specify either the directory the gem directory is in or the 
 We now support Bundler!
 Removed all dependencies.
 
+== 7/10/2012
+
+Rewrote for configuration file in Ruby.

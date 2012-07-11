@@ -1,4 +1,0 @@
-
-class ::Development::OtherRequireMock
-
-end

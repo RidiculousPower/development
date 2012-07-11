@@ -1,4 +1,0 @@
-
-class ::Development::MockGem
-
-end

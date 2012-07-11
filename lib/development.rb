@@ -1,44 +1,319 @@
 
+# namespaces that have to be declared ahead of time for proper load order
+require_relative './namespaces'
+
+# source file requires
+require_relative './requires.rb'
+
 ###
 # Singleton that manages configurations and requires.
 #
 module ::Development
-  
-  #############
-  #  loaded?  #
-  #############
 
   ###
-  # Query whether gem was loaded via Development rather than standard require.
+  # Name of configuration file: .development.rb.
   #
-  # @param gem_name
+  ConfigurationFileName = '.development.rb'
+
+  #####################
+  #  self.initialize  #
+  #####################
+  
+  ###
+  # Initialize internal tracking variables.
+  #
+  # @return [Development] Self.
+  #
+  def self.initialize
+
+    @enable_for_all = false
+    
+    @directories = { }
+    
+    @gems = { }
+    @gemsets = { }
+
+    @general_load_paths = [ ]
+
+    @loaded_gems = { }
+
+    return self
+    
+  end
+
+  ################
+  #  self.clear  #
+  ################
+  
+  ###
+  # Reset internal tracking variables.
+  #
+  # @return [Development] Self.
+  #
+  def self.clear
+    
+    @enable_for_all = false
+
+    @directories.clear
+
+    @gems.clear
+    @gemsets.clear
+
+    @general_load_paths.clear
+
+    @loaded_gems.clear
+    
+    return self
+    
+  end
+
+  ##############
+  #  self.gem  #
+  ##############
+  
+  ###
+  # Define a gem or retrieve defined gem.
+  #
+  # @param name
   #
   #        Name of gem.
   #
-  # @return [true,false] Whether gem was loaded via Development.
+  # @param directory_or_path
   #
-  def loaded?( gem_name )
+  #        Development::Directory or String describing path.
+  #
+  # @return [::Development::Gem]
+  #
+  def self.gem( name, directory_or_path = nil )
+
+    gem_require_name = name.to_s.gsub( '/', '-' )
+
+    name = gem_require_name.to_sym
+
+    if gem_instance = @gems[ name ]
+      if directory_or_path
+        gem_instance.set_directory( directory_or_path )
+      end
+    else
+      @gems[ name ] = gem_instance = Gem.new( name, directory_or_path )
+    end
     
-    return @loaded_gems.has_key?( gem_name.to_sym )
+    return gem_instance
+
+  end
+  
+  ##################
+  #  self.get_gem  #
+  ##################
+  
+  ###
+  # Retrieve defined gem.
+  #
+  # @param name
+  #
+  #        Name of gem.
+  #
+  # @return [::Development::Gem]
+  #
+  def self.get_gem( name )
+    
+    return @gems[ name.to_sym ]
     
   end
   
+  ###############
+  #  self.gems  #
+  ###############
+  
+  ###
+  # Get hash of gems.
+  #
+  # @return [Hash{Symbol=>Array<::Development::Gem>}] Hash of gemsets and their gem or gemset members.
+  #
+  def self.gems
+    
+    return @gems
+    
+  end
+
+  #################
+  #  self.gemset  #
+  #################
+  
+  ###
+  # Define a gem or retrieve defined gem.
+  #
+  # @overload self.gemset( name, gem_or_gemset, ... )
+  #
+  #   @param name
+  #   
+  #          Name of gemset.
+  #
+  #   @param gem_or_gemset
+  #
+  #          Gem or Gemset name or instance.
+  #
+  # @return [::Development::Gemset]
+  #
+  def self.gemset( name, *gems_or_gemsets )
+
+    name = name.to_sym
+    
+    unless gemset_instance = @gemsets[ name ]
+      @gemsets[ name ] = gemset_instance = Gemset.new( name )
+    end
+    
+    gemset_instance.add( *gems_or_gemsets )
+    
+    return gemset_instance
+    
+  end
+  
+  #####################
+  #  self.get_gemset  #
+  #####################
+  
+  ###
+  # Retrieve defined gemset.
+  #
+  # @param name
+  #
+  #        Name of gemset.
+  #
+  # @return [::Development::Gemset]
+  #
+  def self.get_gemset( name )
+    
+    return @gemsets[ name.to_sym ]
+    
+  end
+  
+  ##################
+  #  self.gemsets  #
+  ##################
+  
+  ###
+  # Get hash of gemsets and their gem or gemset members.
+  #
+  # @return [Hash{Symbol=>Array<::Development::Gemset>}] Hash of gemsets and their gem or gemset members.
+  #
+  def self.gemsets
+    
+    return @gemsets
+    
+  end
+
   ####################
   #  self.directory  #
   ####################
-  
+
   ###
   # Return path for directory name.
   #
-  # @param directory_name
+  # @overload self.directory( name, path, gem_or_gemset, ... )
   #
-  #        Name of named directory.
+  #   @param directory_name
+  #   
+  #          Name of named directory.
+  #   
+  #   @param path_parts
+  #   
+  #          The first can be a Symbol naming a directory; any can be String describing directory path.
   #
-  # @return [String] Directory path associated with directory name.
+  # @return [::Development::Directory] Directory.
   #
-  def self.directory( directory_name )
+  def self.directory( name, *path_parts )
+    
+    name = name.to_sym
 
-    return @named_directories[ directory_name.to_sym ]
+    if directory_instance = @directories[ name ]
+      unless path_parts.empty?
+        directory_instance.set_path( *path_parts )
+      end
+    else
+      if path_parts.empty?
+        raise ::ArgumentError, 'Path required to create directory :' << name.to_s + '.'
+      end
+      @directories[ name ] = directory_instance = Directory.new( name, *path_parts )
+    end
+
+    return directory_instance
+    
+  end
+  
+  ########################
+  #  self.get_directory  #
+  ########################
+  
+  ###
+  # Return directory with name.
+  #
+  # @param name
+  #
+  #        Name of directory to return.
+  #
+  # @return [::Development::Directory] Directory.
+  #
+  def self.get_directory( name )
+    
+    return @directories[ name.to_sym ]
+    
+  end
+
+  ######################
+  #  self.directories  #
+  ######################
+  
+  ###
+  # Get Hash of named directory names to paths.
+  #
+  # @return [Hash{Symbol=>::Development::Directory}]
+  #
+  def self.directories
+
+    return @directories
+
+  end
+
+  ############################
+  #  self.general_load_path  #
+  ############################
+
+  ###
+  # Define general load path.
+  #   
+  # @param path
+  # 
+  #        String describing directory path.
+  #
+  # @return [::Development] Self.
+  #
+  def self.general_load_path( path )
+    
+    @general_load_paths.push( ::File.expand_path( path ) )
+    
+    return self
+    
+  end
+
+  ###################################
+  #  self.remove_general_load_path  #
+  ###################################
+
+  ###
+  # Remove general load path.
+  #   
+  # @param path
+  # 
+  #        String describing directory path.
+  #
+  # @return [::Development] Self.
+  #
+  def self.remove_general_load_path( path )
+    
+    @general_load_paths.delete( ::File.expand_path( path ) )
+    
+    return self
     
   end
   
@@ -55,23 +330,8 @@ module ::Development
 
     return @general_load_paths
 
-  end
-
-  ############################
-  #  self.named_directories  #
-  ############################
+  end  
   
-  ###
-  # Get Hash of named directory names to paths.
-  #
-  # @return [Hash{Symbol=>String}]
-  #
-  def self.named_directories
-
-    return @named_directories
-
-  end
-
   ###########################
   #  self.enabled_for_all?  #
   ###########################
@@ -87,788 +347,134 @@ module ::Development
     
   end
 
-  #######################
-  #  self.enabled_gems  #
-  #######################
-  
-  ###
-  # Get gems that have been explicitly enabled.
-  #
-  # @return [Array<Symbol>] Array of gem or gemset names.
-  #
-  def self.enabled_gems
-    
-    return @enabled_gems.keys
-    
-  end
-
-  ########################
-  #  self.disabled_gems  #
-  ########################
-  
-  ###
-  # Get gems that have been explicitly disabled.
-  #
-  # @return [Array<Symbol>] Array of gem or gemset names.
-  #
-  def self.disabled_gems
-
-    return @disabled_gems.keys
-
-  end
-
   ##################
-  #  self.gemsets  #
+  #  self.enable!  #
   ##################
-  
-  ###
-  # Get hash of gemsets and their gem or gemset members.
-  #
-  # @return [Hash{Symbol=>Array<Symbol>}] Hash of gemsets and their gem or gemset members.
-  #
-  def self.gemsets
-    
-    return @gemsets
-    
-  end
 
-  ####################
-  #  self.locations  #
-  ####################
-  
   ###
-  # Hash of locations and the gems or gemsets located at each.
+  # Enable gems.
   #
-  # @return [Hash{Symbol=>Array{String}] 
+  # @overload enable!
   #
-  def self.locations
+  # @overload enable( gem_or_gemset, ... )
+  #
+  #   @param gem_or_gemset 
+  #
+  #          Gem or Gemset instance or name to enable.
+  #
+  # @return [::Development] Self. 
+  #
+  def self.enable!( *gem_or_gemset_names )
     
-    return @locations
+    if gem_or_gemset_names.empty?
+
+      @enable_for_all = true
+      @gems.each do |this_gem_name, this_gem|
+        this_gem.enable!
+      end
+      @gemsets.each do |this_gemset_name, this_gemset|
+        this_gemset.enable!
+      end
+
+    else
+
+      gem_or_gemset_names.each do |this_gemset_or_gem_name|
+        if this_gemset_or_gem_name.is_a?( ::Hash )
+          this_gemset_or_gem_name.each do |this_gem, this_path|
+            gem_instance = gem( this_gem )
+            gem_instance.set_directory( this_path )
+            gem_instance.enable!
+          end
+        else
+          this_gem_or_gemset_reference_name = this_gemset_or_gem_name.to_s.gsub( '/', '-' ).to_sym
+          if gem_instance = @gems[ this_gem_or_gemset_reference_name ]
+            gem_instance.enable!
+          end
+          if gemset_instance = @gemsets[ this_gem_or_gemset_reference_name ]
+            gemset_instance.enable!
+          end
+        end
+      end
+
+    end
+    
+    return self
     
   end
 
   ###################
-  #  self.location  #
+  #  self.disable!  #
   ###################
-  
+
   ###
-  # Get gems or gemsets associated with location.
+  # Disable gems.
   #
-  # @param location_name
+  # @overload disable!
   #
-  #        Name of location.
+  # @overload disable( gem_or_gemset, ... )
   #
-  # @return [Array<Symbol>]
+  #   @param gem_or_gemset 
   #
-  def self.location( location_name )
+  #          Gem or Gemset instance or name to disable.
+  #
+  # @return [::Development] Self. 
+  #
+  def self.disable!( *gem_or_gemset_names )
+
+    if gem_or_gemset_names.empty?
+
+      @enable_for_all = false
+      @gems.each do |this_gem_name, this_gem|
+        this_gem.disable!
+      end
+      @gemsets.each do |this_gemset_name, this_gemset|
+        this_gemset.disable!
+      end
+
+    else
+
+      gem_or_gemset_names.each do |this_gemset_or_gem_name|
+        this_gem_or_gemset_reference_name = this_gemset_or_gem_name.to_s.gsub( '/', '-' ).to_sym
+        if gem_instance = @gems[ this_gem_or_gemset_reference_name ]
+          gem_instance.disable!
+        end
+        if gemset_instance = @gemsets[ this_gem_or_gemset_reference_name ]
+          gemset_instance.disable!
+        end
+      end
+
+    end
+
+    return self
+
+  end
+  
+  #############
+  #  loaded?  #
+  #############
+
+  ###
+  # Query whether gem was loaded via Development rather than standard require.
+  #
+  # @param gem_name
+  #
+  #        Name of gem.
+  #
+  # @return [true,false] Whether gem was loaded via Development.
+  #
+  def loaded?( gem_name )
     
-    return @locations[ location_name.to_sym ]
+    gem_require_name = gem_name.to_s.gsub( '/', '-' )
+    
+    return @loaded_gems.has_key?( gem_require_name.to_sym )
     
   end
   
   ######################################################################################################################
       private ##########################################################################################################
   ######################################################################################################################
-  
-  ###
-  # @private
-  #
-  # Container to namespace exceptions.
-  #
-  module Exception
-  end
-
-  ###
-  # Name of configuration file: .development.
-  #
-  ConfigurationFileName = '.development'
-  
-  @enabled_gems = { }
-  @disabled_gems = { }
-  
-  @gemsets = { }
-  @gem_locations = { }
-  
-  @general_load_paths = [ ]
-
-  @loaded_gems = { }
-
-  @named_directories = { }
-  @locations = { }
-
-  @enable_for_all = false
-
-  ################
-  #  self.clear  #
-  ################
-  
-  ###
-  # Reset internal tracking variables.
-  #
-  # @return [Development] Self.
-  #
-  def self.clear
     
-    @enabled_gems.clear
-    @disabled_gems.clear
-    @gemsets.clear
-    @gem_locations.clear
-    @general_load_paths.clear
-    @loaded_gems.clear
-    @named_directories.clear
-    @locations.clear
-    @enable_for_all = false
-    
-    return self
-    
-  end
-  
-  ##################################
-  #  self.load_configuration_file  #
-  ##################################
-  
-  ###
-  # Load configuration file.
-  #   Looks first in project directory, second in home directory. 
-  #   If configuration file is not found in project directory, Development will not load.
-  #
-  def self.load_configuration_file( path )
-        
-    # we build up a configuration line and process when we reach its end (the next line)
-    expression_string = ''
-
-    configuration_file_path = ::File.expand_path( path )
-    
-    @line_number = 0
-
-    ::File.open( configuration_file_path ).each_with_index do |this_line, this_line_number|
-    
-      # when parse_configuration_file_line returns false we have a complete expression
-      while parse_configuration_file_line( expression_string, this_line )
-
-        # process expression_string
-        parse_configuration_expression( expression_string )
-
-        # reset expression_string
-        expression_string.clear
-        
-        # update line number where expression begins
-        @line_number = this_line_number
-        unless this_line.empty?
-          @line_number += 1
-        end
-        
-        # loop will cause start with this_line, which told parse_configuration_file_line 
-        # that we were done, and which is therefore not yet processed
-        
-      end
-
-    end
-
-    parse_configuration_expression( expression_string )
-    
-  end
-  
-  ########################################
-  #  self.parse_configuration_file_line  #
-  ########################################
-
-  ###
-  # Parses configuration_file_line to construct expression_string from multiple configuration_file_lines.
-  #
-  # @param expression_string 
-  #
-  #        Configuration expression that spans one or more lines in configuration file.
-  #
-  # @param configuration_file_line 
-  #
-  #        Literal line from configuration file (may only be part of an expression).
-  #
-  # @return [true,false] Whether expression is still complete. 
-  #                      True means configuration_file_line was not processed.
-  #
-  def self.parse_configuration_file_line( expression_string, configuration_file_line, continuation = false )
-
-    expression_complete = false
-
-    # if we begin with a comment we can throw away the line
-    if configuration_file_line[ 0 ] == '#'
-      
-      # nothing to do - we just ignore the line
-      
-    # if we begin with whitespace we have a continuation
-    elsif configuration_file_line[ 0 ] =~ /\s/
-      
-      configuration_file_line.strip!
-      
-      expression_complete = parse_configuration_file_line( expression_string, configuration_file_line, true )
-    
-    elsif continuation
-      
-      unless expression_string.empty?
-        unless configuration_file_line.empty?
-          expression_string << ' '
-        end
-      end
-      expression_string << configuration_file_line.strip
-
-    elsif expression_string.empty?
-      
-      expression_string.replace( configuration_file_line.strip )
-    
-    # otherwise we reached the next line of the configuration file
-    else
-
-      expression_complete = true
-
-    end
-    
-    return expression_complete
-    
-  end
-  
-  #########################################
-  #  self.parse_configuration_expression  #
-  #########################################
-  
-  ###
-  # Parse single configuration expression built up from one or more actual configuration file lines.
-  #
-  # @param expression_string
-  #
-  #        String describing configuration directive.
-  #
-  # @return [Object] self.
-  #
-  def self.parse_configuration_expression( expression_string )
-    
-    case expression_string[ 0 ]
-      
-      # + - named directory expression
-      when '+'
-
-        # either a directory definition or a general directory directive
-        # directory definitions are multiplart, whereas general directory definitions are one part
-        parse_named_directory_expression( expression_string )
-                
-      # - - remove general path
-      when '-'
-
-        parse_remove_general_load_path_expression( expression_string )
-
-      # = - gemset expression
-      when '='
-
-        parse_gemset_expression( expression_string )
-
-      # @ - location expression
-      when '@'
-
-        parse_general_directory_or_location_expression( expression_string )
-
-      # ! - enable/disable expression
-      when '!'
-
-        parse_enable_disable_expression( expression_string )
-      
-      # general path expression
-      else
-
-        parse_general_load_path_expression( expression_string )
-      
-    end
-    
-    return self
-    
-  end
-  
-  #########################################################
-  #  self.parse_general_directory_or_location_expression  #
-  #########################################################
-  
-  ###
-  # Parse expression string that has been determined as either a general path or location expression.
-  #
-  # @param expression_string
-  #
-  #        String describing general path or location expression.
-  #
-  # @return [Object] Self.
-  #
-  def self.parse_general_directory_or_location_expression( expression_string )
-    
-    # if we have multiple parts
-    if whitespace_index = expression_string =~ /\s/
-      
-      parse_location_expression( expression_string )
-    
-    # if we have one part
-    else
-      
-      parse_general_load_path_expression( expression_string )
-      
-    end
-    
-    return self
-    
-  end
-  
-  ###########################################
-  #  self.parse_named_directory_expression  #
-  ###########################################
-  
-  ###
-  # Parse expression string that has been determined as a named directory expression.
-  #
-  # @param expression_string
-  #
-  #        String describing named directory expression.
-  #
-  # @return [Object] Self.
-  #
-  def self.parse_named_directory_expression( expression_string )
-    
-    # +directory_name path
-
-    unless whitespace_index = expression_string =~ /\s/
-      raise Exception::MalformedExpression::
-            MalformedNamedDirectoryExpression.new( expression_string, @line_number )
-    end
-
-    directory_name = expression_string.slice( 1, whitespace_index - 1 )
-    slice_length = expression_string.length - whitespace_index
-    path = expression_string.slice( whitespace_index + 1, slice_length ).strip
-
-    case path[0]
-      when '@'
-        path_parts = path.split( '/' )
-        named_path_name = path_parts.shift
-        named_path_name.slice!( 0, 1 )
-        path = ::File.join( directory( named_path_name ), path_parts )
-    end
-    
-    @named_directories[ directory_name.to_sym ] = ::File.expand_path( path )
-    
-    return self
-    
-  end
-
-  ##################################
-  #  self.parse_gemset_expression  #
-  ##################################
-
-  ###
-  # Parse expression string that has been determined as a gemset expression.
-  #
-  # @param expression_string
-  #
-  #        String describing gemset expression.
-  #
-  # @return [Object] Self.
-  #
-  def self.parse_gemset_expression( expression_string )
-
-    # =gemset gem_or_set_name[,] ...
-    # =gemset +gem_or_set_name[,] ...
-    # =gemset -gem_or_set_name[,] ...
-
-    gemset_name = parse_base_action_from_expression_string( expression_string )
-
-    gemset = create_gemset( gemset_name )
-    
-    parse_gem_names_from_expression_string( gemset, expression_string )
-    
-    return self
-    
-  end
-
-  ###################################################
-  #  self.parse_base_action_from_expression_string  #
-  ###################################################
-  
-  ###
-  # Parse signal character (+, -, =, @, !) and base action string from expression.
-  #
-  # @param expression_string
-  #
-  #        Expression string.
-  #
-  # @return [String] Base action string.
-  #
-  def self.parse_base_action_from_expression_string( expression_string )
-    
-    base_action = nil
-    
-    # get rid of =
-    expression_string.slice!( 0, 1 )
-    
-    if whitespace_index = expression_string =~ /\s/
-      base_action = expression_string.slice!( 0, whitespace_index )
-    else
-      base_action = expression_string.dup
-      expression_string.clear
-    end
-    
-    expression_string.strip!
-
-    return base_action
-    
-  end
-  
-  #################################################
-  #  self.parse_gem_names_from_expression_string  #
-  #################################################
-
-  ###
-  # Parse gem name list separated by optional comma and white space from expression.
-  #
-  # @param hash
-  #
-  #        Hash to add parsed data to.
-  #
-  # @param expression_string
-  #
-  #        Expression string.
-  #
-  # @param require_exist [true,false]
-  #
-  #        Raise exception if gems do not exist.
-  #
-  # @return [Development] Self.
-  #
-  def self.parse_gem_names_from_expression_string( hash, expression_string, require_exist = false )
-
-    while next_whitespace_index = expression_string =~ /\s/
-      parse_gem_name_from_expression_string( hash, expression_string, next_whitespace_index )
-    end
-
-    # also slice till the end
-    parse_gem_name_from_expression_string( hash, expression_string, expression_string.length, require_exist )
-    
-    return self
-    
-  end
-
-  ################################################
-  #  self.parse_gem_name_from_expression_string  #
-  ################################################
-  
-  ###
-  # Helper method to slice gem name from expression string and add or subtract from gemset.
-  #
-  # @param hash
-  #
-  #        Hash to add parsed data to.
-  #
-  # @param gemset
-  #
-  #        Gemset instance.
-  #
-  # @param expression_string
-  #
-  #        Expression string.
-  # 
-  # @param slice_to_index
-  #
-  #        Index to slice expression string to.
-  #
-  # @param require_exist [true,false]
-  #
-  #        Raise exception if gems do not exist.
-  #
-  # @return [Symbol] Parsed gem name.
-  #
-  def self.parse_gem_name_from_expression_string( hash, expression_string, slice_to_index, require_exist = false )
-    
-    gem_name = expression_string.slice!( 0, slice_to_index )
-
-    unless gem_name.empty?
-            
-      case gem_name[ -1 ]
-        when ','
-          gem_name.slice!( -1, 1 )
-      end
-    
-      should_add = true
-      
-      case gem_name[ 0 ]
-        when '+'
-          gem_name.slice!( 0, 1 )
-        when '-'
-          gem_name.slice!( 0, 1 )
-          hash.delete( gem_name.to_sym )
-          should_add = false
-        else
-      end
-
-      # ensure we have 'gem-subname' rather than 'gem/subname'
-      # we really just need one or the other consistently
-      gem_name.gsub!( '/', '-' )
-
-      gem_name = gem_name.to_sym
-
-      if require_exist
-        unless @enabled_gems.has_key?( gem_name ) or 
-               @disabled_gems.has_key?( gem_name ) or 
-               @gemsets.has_key?( gem_name)
-          raise Exception::ExpressionError::UnknownGemOrGemsetName.new( gem_name, @line_number )
-        end
-      end
-
-      if should_add
-        hash[ gem_name ] = true
-      end
-      
-      expression_string.strip!
-
-    end
-    
-    return gem_name
-    
-  end
-
-  ########################
-  #  self.create_gemset  #
-  ########################
-  
-  ###
-  # Create gemset with name.
-  #
-  # @param gemset_name
-  #
-  #        Name of gemset.
-  #
-  # @return [Array] Gemset.
-  #
-  def self.create_gemset( gemset_name )
-
-    gemset_name = gemset_name.to_sym
-    
-    unless gemset = @gemsets[ gemset_name ]
-      @gemsets[ gemset_name ] = gemset = { }
-    end
-    
-    return gemset
-    
-  end
-
-  #################
-  #  self.gemset  #
-  #################
-  
-  ###
-  # Get gemset with name.
-  #
-  # @param gemset_name
-  #
-  #        Name of gemset.
-  #
-  # @return [Array] Gemset.
-  #
-  def self.gemset( gemset_name )
-    
-    gemset_members = nil  
-    
-    if gemset = @gemsets[ gemset_name.to_sym ]
-      gemset_members = gemset.keys
-    end
-    
-    return gemset_members
-    
-  end
-
-  ####################################
-  #  self.parse_location_expression  #
-  ####################################
-    
-  ###
-  # Parse expression string that has been determined as a location expression.
-  #
-  # @param expression_string
-  #
-  #        String describing location expression.
-  #
-  # @return [Object] Self.
-  #
-  def self.parse_location_expression( expression_string )
-    
-    # @directory_name gem_or_set_name[,] ...
-    
-    directory_name = parse_base_action_from_expression_string( expression_string )
-    
-    directory_name = directory_name.to_sym
-    
-    unless @named_directories.has_key?( directory_name )
-      raise Exception::MalformedExpression::UnknownDirectoryName.new( directory_name, @line_number )
-    end
-    
-    unless directory_members = @locations[ directory_name ]
-      @locations[ directory_name ] = directory_members = { }
-    end
-    
-    parse_gem_names_from_expression_string( directory_members, expression_string )
-    
-    directory_members.each do |this_gem_or_gemset, true_value|
-      if gemset = @gemsets[ this_gem_or_gemset ]
-        gemset.each do |this_gem, true_value|
-          @gem_locations[ this_gem ] = directory_name
-        end
-      else
-        @gem_locations[ this_gem_or_gemset ] = directory_name
-      end
-    end
-    
-    return self
-    
-  end
-
-  ##########################################
-  #  self.parse_enable_disable_expression  #
-  ##########################################
-
-  ###
-  # Parse expression string that has been determined as a enable/disable expression.
-  #
-  # @param expression_string
-  #
-  #        String describing enable/disable expression.
-  #
-  # @return [Object] Self.
-  #
-  def self.parse_enable_disable_expression( expression_string )
-    
-    # !enable
-    # !disable
-    # !enable gem_or_set_name[,] ...
-    # !disable gem_or_set_name[,] ...
-    
-    # enable or disable
-    enable_or_disable = parse_base_action_from_expression_string( expression_string )
-    
-    gems = nil
-    unless expression_string.empty?
-      gems = { }
-      parse_gem_names_from_expression_string( gems, expression_string )
-    end
-    
-    case enable_or_disable = enable_or_disable.to_sym
-      
-      when :enable
-        
-        if gems
-          gems.each do |this_gem_or_gemset, true_value|
-            if gemset = @gemsets[ this_gem_or_gemset ]
-              gemset.each do |this_gem, true_value|
-                @enabled_gems[ this_gem ] = true
-                @disabled_gems.delete( this_gem )
-              end
-            else
-              this_gem = this_gem_or_gemset
-              @enabled_gems[ this_gem ] = true
-              @disabled_gems.delete( this_gem )
-            end
-          end
-        else
-          @disabled_gems.delete_if do |this_gem, true_value|
-            @enabled_gems[ this_gem ] = true
-            true
-          end
-          @enable_for_all = true
-        end
-        
-      when :disable
-
-        if gems
-          gems.each do |this_gem_or_gemset, true_value|
-            if gemset = @gemsets[ this_gem_or_gemset ]
-              gemset.each do |this_gem, true_value|
-                @disabled_gems[ this_gem ] = true
-                @enabled_gems.delete( this_gem )
-              end
-            else
-              this_gem = this_gem_or_gemset
-              @disabled_gems[ this_gem ] = true
-              @enabled_gems.delete( this_gem )
-            end
-          end
-        else
-          @enabled_gems.delete_if do |this_gem, true_value|
-            @disabled_gems[ this_gem ] = true
-            true
-          end 
-          @enable_for_all = false
-        end
-        
-    end
-    
-    # do we have gems?
-    
-    return self
-    
-  end
-
-  #############################################
-  #  self.parse_general_load_path_expression  #
-  #############################################
-
-  ###
-  # Parse expression string that has been determined as a general directory expression.
-  #
-  # @param expression_string
-  #
-  #        String describing general directory expression.
-  #
-  # @return [Object] Self.
-  #
-  def self.parse_general_load_path_expression( expression_string )
-    
-    # path/to/directory, ~/path/to/directory, /path/to/directory
-    # +directory_name/path/from/directory
-    
-    case expression_string[ 0 ]
-      
-      when '@'
-
-        path_parts = expression_string.split( '/' )
-        named_directory = path_parts.shift
-        named_directory.slice!( 0, 1 )
-        named_directory = named_directory.to_sym
-        expression_string = ::File.expand_path( ::File.join( directory( named_directory ), path_parts ) )
-      
-    end
-    
-    @general_load_paths.push( ::File.expand_path( expression_string ) )
-    
-    return self
-    
-  end
-
-  ####################################################
-  #  self.parse_remove_general_load_path_expression  #
-  ####################################################
-  
-  ###
-  # Parse expression string that has been determined as a remove-general-directory expression.
-  #
-  # @param expression_string
-  #
-  #        String describing remove general directory expression.
-  #
-  # @return [Object] Self.
-  #
-  def self.parse_remove_general_load_path_expression( expression_string )
-    
-    # -path/to/directory, -~/path/to/directory, -/path/to/directory
-    
-    expression_string.slice!( 0, 1 )
-    path_string = expression_string.dup
-    expression_string.clear
-
-    @general_load_paths.delete( ::File.expand_path( path_string ) )
-    
-    return self
-    
-  end
+  initialize
 
   ##################
   #  self.require  #
@@ -890,56 +496,32 @@ module ::Development
     # if our path ends with an extension we are not requiring a gem and thus not responsible for managing it
     if ::File.extname( gem_name_or_path ).empty?
 
-      gem_name = gem_name_or_path.to_s
-
-      if @loaded_gems.has_key?( gem_name.to_sym )
+      gem_directory_name = gem_name_or_path.to_s.gsub( '/', '-' )
+      gem_require_name = gem_name_or_path.to_s.gsub( '-', '/' )
+      
+      gem_reference_name = gem_directory_name.to_sym
+      
+      if @loaded_gems.has_key?( gem_reference_name )
+        
         did_load = false
+
       else
-        # ensure we have 'gem-subname' rather than 'gem/subname'
-        # we really just need one or the other consistently
-        gem_name = gem_name.gsub( '/', '-' )
-        gem_directory_name = gem_name.gsub( '/', '-' )
 
         # look for gem name in enabled gems/gemsets
-        if @enabled_gems.include?( gem_name.to_sym ) or 
-           @enable_for_all && ! @disabled_gems.include?( gem_name.to_sym )
+        if gem_instance = @gems[ gem_reference_name ]
 
-          if directory_name = @gem_locations[ gem_name.to_sym ]
-
-            load_path = directory( directory_name )
-          
-            if gem_name_in_load_path?( load_path, gem_directory_name )
-          
-              load_gem_in_path( load_path, gem_directory_name )
-              @loaded_gems[ gem_name.to_sym ] = true
-              did_load = true
-          
-            elsif gem_name_at_load_path?( load_path, gem_directory_name )
-            
-              load_gem_at_path( load_path, gem_directory_name )
-              @loaded_gems[ gem_name.to_sym ] = true
-              did_load = true
-            
-            end
-                    
+          if gem_instance.enabled?
+            load_gem_instance( gem_instance, gem_directory_name, gem_require_name )
+            did_load = true
+          elsif @enable_for_all && ! gem_instance.disabled?
+            did_load = attempt_load_from_general_load_paths( gem_directory_name, gem_require_name )
           end
-    
-          unless did_load
-          
-            # look in each path for gem - use first to match
-            @general_load_paths.each do |this_load_path|
-
-              # look for gem name at load path
-              if gem_name_at_load_path?( this_load_path, gem_name )
-                load_gem_at_path( this_load_path, gem_name )
-                @loaded_gems[ gem_name.to_sym ] = true
-                did_load = true
-              end
-
-            end
-      
-          end
-    
+        
+        # otherwise see if we perform general loading
+        end
+        
+        if ! did_load and @enable_for_all
+          attempt_load_from_general_load_paths( gem_directory_name, gem_require_name )
         end
         
       end
@@ -949,9 +531,97 @@ module ::Development
     return did_load
     
   end
+  
+  ############################
+  #  self.load_gem_instance  #
+  ############################
+  
+  ###
+  # Load gem using configuration information provides by gem instance.
+  #
+  # @param gem_instance
+  #
+  #        Gem instance.
+  #
+  # @param gem_directory_name
+  #
+  #        Gem directory in hyphenated gem-subgem format.
+  #
+  # @param gem_require_name
+  #
+  #        Gem name in slashed gem/subgem format.
+  #
+  # @return [::Development] Self.
+  #
+  def self.load_gem_instance( gem_instance, gem_directory_name, gem_require_name )
+    
+    gem_location = gem_instance.directory.path
+
+    if path_is_gem_directory?( gem_location, gem_require_name )
+      # already set
+    elsif path_contains_gem_directory?( gem_location, gem_directory_name, gem_require_name )
+      gem_location = ::File.join( gem_location, gem_directory_name )
+    end
+
+    load_gem_in_path( gem_location, gem_directory_name )
+    @loaded_gems[ gem_require_name.to_sym ] = true
+    
+    return self
+    
+  end
+  
+  ###############################################
+  #  self.attempt_load_from_general_load_paths  #
+  ###############################################
+  
+  ###
+  # Attempt to load gem from general load paths if any are provided.
+  #
+  # @param gem_directory_name
+  #
+  #        Gem directory in hyphenated gem-subgem format.
+  #
+  # @param gem_require_name
+  #
+  #        Gem name in slashed gem/subgem format.
+  #
+  # @return [::Development] Self.
+  #
+  def self.attempt_load_from_general_load_paths( gem_directory_name, gem_require_name )
+    
+    gem_require_name = gem_directory_name.to_sym
+    
+    did_load = false
+    
+    # look in each path for gem - use first to match
+    @general_load_paths.each do |this_load_path|
+
+      if path_is_gem_directory?( this_load_path, gem_require_name )
+
+        load_gem_in_path( this_load_path, gem_directory_name )
+        @loaded_gems[ gem_require_name ] = true
+        did_load = true
+        break
+
+      elsif path_contains_gem_directory?( this_load_path, gem_directory_name, gem_require_name )
+
+        gem_location = ::File.join( this_load_path, gem_directory_name )
+
+        load_gem_in_path( gem_location, gem_directory_name )
+        @loaded_gems[ gem_require_name ] = true
+        did_load = true
+        break
+
+      end
+
+    end
+    
+    return did_load
+    
+  end
 
   #################################
-  #  self.gem_name_in_load_path?  #
+  #  self.path_is_gem_directory?  #
   #################################
   
   ###
@@ -961,33 +631,29 @@ module ::Development
   #
   #        Path where gem directory might be located.
   #
-  # @param gem_directory_name 
+  # @param gem_require_name 
   #
   #        Name of gem. Assumes gem-subname is used rather than gem/subname.
   #
   # @return [true,false] Whether gem name is present.
   #
-  def self.gem_name_in_load_path?( gem_path, gem_directory_name, require_gem_at_path = false )
+  def self.path_is_gem_directory?( load_path, gem_require_name )
     
     exists_at_load_path = false
     
-    gem_name = gem_directory_name.gsub( '-', '/' )
-    
-    gem_require_file = ::File.join( gem_path, 'lib', gem_name ) + '.rb'
-    
+    gem_require_file = ::File.join( load_path, 'lib', gem_require_name ) + '.rb'
+
     if ::File.exist?( ::File.expand_path( gem_require_file ) )
-      
       exists_at_load_path = true
-    
     end
     
     return exists_at_load_path
     
   end
 
-  #################################
-  #  self.gem_name_at_load_path?  #
-  #################################
+  #######################################
+  #  self.path_contains_gem_directory?  #
+  #######################################
   
   ###
   # Query whether gem name is present at load path, meaning load path specifies the directory holding gem directory.
@@ -1000,17 +666,20 @@ module ::Development
   #
   #        Name of gem. Assumes gem-subname is used rather than gem/subname.
   #
+  # @param gem_require_name 
+  #
+  #        Name of gem. Assumes gem/subname is used rather than gem-subname.
+  #
   # @return [true,false] Whether gem name is present.
   #
-  def self.gem_name_at_load_path?( load_path, gem_directory_name, require_gem_at_path = false )
+  def self.path_contains_gem_directory?( load_path, gem_directory_name, gem_require_name )
     
     exists_at_load_path = false
     
-    gem_name = gem_directory_name.gsub( '-', '/' )
     gem_path = ::File.join( load_path, gem_directory_name )
     
-    gem_require_file = ::File.join( gem_path, 'lib', gem_name ) + '.rb'
-    
+    gem_require_file = ::File.join( gem_path, 'lib', gem_require_name ) + '.rb'
+
     if ::Dir.exist?( ::File.expand_path( gem_path ) ) and 
        ::File.exist?( ::File.expand_path( gem_require_file ) )
       
@@ -1039,69 +708,45 @@ module ::Development
   #
   # @return [true,false] Whether gem name is present.
   #
-  def self.load_gem_in_path( gem_path, gem_directory_name )
+  def self.load_gem_in_path( load_path, gem_directory_name )
         
-    gem_name = gem_directory_name.gsub( '-', '/' )
-    
-    gem_require_file = ::File.join( gem_path, 'lib', gem_name ) + '.rb'
+    gem_require_file = ::File.join( load_path, 'lib', gem_directory_name ) + '.rb'
     require_relative( ::File.expand_path( gem_require_file ) )
     
   end
-  
-  ###########################
-  #  self.load_gem_at_path  #
-  ###########################
+
+  ##################################
+  #  self.load_configuration_file  #
+  ##################################
   
   ###
-  # Load gem from path to directory holding gem directory. Assumes gem is present at path.
+  # Load Development configuration file.
   #
-  # @param load_path 
+  # @param path 
   #
-  #        Path where gem directory might be located.
+  #        Location of configuration file.
   #
-  # @param gem_directory_name 
+  # @return [::Development] Self.
   #
-  #        Name of gem. Assumes gem-subname is used rather than gem/subname.
-  #
-  # @return [true,false] Whether gem name is present.
-  #
-  def self.load_gem_at_path( load_path, gem_directory_name )
-        
-    gem_name = gem_directory_name.gsub( '-', '/' )
-    gem_path = ::File.join( load_path, gem_directory_name )
+  def self.load_configuration_file( path )
     
-    gem_require_file = ::File.join( gem_path, 'lib', gem_name ) + '.rb'
+    absolute_path = ::File.expand_path( path )
     
-    require_relative( ::File.expand_path( gem_require_file ) )
+    if ::File.exists?( absolute_path )
+      ::Development::ConfigurationInterface.module_eval do
+        alias_method :gem, :gem_method
+      end
+      load( absolute_path )
+      ::Development::ConfigurationInterface.module_eval do
+        remove_method :gem
+      end
+    end
+    
+    return self
     
   end
   
 end
 
-require_relative 'development/require.rb'
-
-require_relative 'development/exception/expression_error.rb'
-require_relative 'development/exception/expression_error/unknown_directory_name.rb'
-require_relative 'development/exception/expression_error/unknown_gem_or_gemset_name.rb'
-
-require_relative 'development/exception/malformed_expression.rb'
-require_relative 'development/exception/malformed_expression/malformed_named_directory_expression.rb'
-require_relative 'development/exception/malformed_expression/malformed_gemset_expression.rb'
-require_relative 'development/exception/malformed_expression/malformed_location_expression.rb'
-require_relative 'development/exception/malformed_expression/malformed_enable_disable_expression.rb'
-require_relative 'development/exception/malformed_expression/malformed_general_directory_expression.rb'
-require_relative 'development/exception/malformed_expression/malformed_remove_general_directory_expression.rb'
-
-###
-# Object is enabled with Development require functionality.
-#
-class ::Object
-  include ::Development::Require
-  extend ::Development::Require
-end
-
-if defined?( ::Bundler )
-  ::Development::Require::BundlerSupport.call
-end
-
-::Development.load_configuration_file( ::File.join( '~', ::Development::ConfigurationFileName ) )
+# post-load setup
+require_relative './setup.rb'
