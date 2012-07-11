@@ -39,9 +39,9 @@ Doing this rather than simply requiring development ensures that Development can
 
 ## 2. Configure Gems Development Should Intercept ##
 
-The primary interface to development is the **.development** configuration file, which should be placed in the user's home directory.
+The primary interface to development is the **.development.rb** configuration file, which should be placed in the user's home directory.
 
-I would make project-specific .development files a requirement (to avoid accidentally enabling it) but I don't think there is a reliable way to find the project directory based on the require. If you know a way, please let me know!
+I would make project-specific .development.rb files a requirement (to avoid accidentally enabling it) but I don't think there is a reliable way to find the project directory based on the require. If you know a way, please let me know!
 
 ### Configuration File Example ###
 
