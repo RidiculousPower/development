@@ -43,6 +43,28 @@ The primary interface to development is the **.development.rb** configuration fi
 
 I would make project-specific .development.rb files a requirement (to avoid accidentally enabling it) but I don't think there is a reliable way to find the project directory based on the require. If you know a way, please let me know!
 
+### Bundler Usage ###
+
+Development plays well with bundler. The only caveat is that you have to require Development before Bundler.require:
+
+```ruby
+require 'bundler'
+
+begin ; require 'development' ; rescue LoadError ; end
+
+Bundler.require
+```
+
+or
+
+```ruby
+begin ; require 'development' ; rescue LoadError ; end
+
+require 'bundler'
+
+Bundler.require
+```
+
 ### Configuration File Example ###
 
 #### Short Example ####
