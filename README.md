@@ -20,6 +20,7 @@ Use cases include:
 
 1. Development work on a gem in the context of another gem that requires it and provides a problem context - cause development version to load without changing any code. This is particularly useful when the require statement is nested in other gems than the one providing the problem context.
 2. Development of multiple side-by-side gems that are not yet released - use require 'gem-name' even before the gem has been installed.
+3. Test development code for deployment contexts (and debug tests) before building/installing gem.
 
 # Usage #
 
