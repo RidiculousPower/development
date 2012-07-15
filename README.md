@@ -14,6 +14,13 @@ Intercept gem-require expression (require 'gem') and require version at alternat
 
 * sudo gem install development
 
+# Why? #
+
+Use cases include:
+
+1. Development work on a gem in the context of another gem that requires it and provides a problem context - cause development version to load without changing any code. This is particularly useful when the require statement is nested in other gems than the one providing the problem context.
+2. Development of multiple side-by-side gems that are not yet released - use require 'gem-name' even before the gem has been installed.
+
 # Usage #
 
 Enabling Development requires two things:
@@ -128,7 +135,6 @@ require 'bundler'
 
 Bundler.require
 ```
-
 
 # License #
 
