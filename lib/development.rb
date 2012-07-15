@@ -563,7 +563,7 @@ module ::Development
       gem_location = ::File.join( gem_location, gem_directory_name )
     end
 
-    load_gem_in_path( gem_location, gem_directory_name )
+    load_gem_in_path( gem_location, gem_require_name )
     @loaded_gems[ gem_require_name.to_sym ] = true
     
     return self
@@ -598,7 +598,7 @@ module ::Development
 
       if path_is_gem_directory?( this_load_path, gem_require_name )
 
-        load_gem_in_path( this_load_path, gem_directory_name )
+        load_gem_in_path( this_load_path, gem_require_name )
         @loaded_gems[ gem_require_name ] = true
         did_load = true
         break
@@ -607,7 +607,7 @@ module ::Development
 
         gem_location = ::File.join( this_load_path, gem_directory_name )
 
-        load_gem_in_path( gem_location, gem_directory_name )
+        load_gem_in_path( gem_location, gem_require_name )
         @loaded_gems[ gem_require_name ] = true
         did_load = true
         break
@@ -702,13 +702,13 @@ module ::Development
   #
   #        Path where gem directory might be located.
   #
-  # @param gem_directory_name 
+  # @param gem_require_name 
   #
-  #        Name of gem. Assumes gem-subname is used rather than gem/subname.
+  #        Name of gem. Assumes gem/subname is used rather than gem-subname.
   #
   # @return [true,false] Whether gem name is present.
   #
-  def self.load_gem_in_path( load_path, gem_directory_name )
+  def self.load_gem_in_path( load_path, gem_require_name )
         
     gem_require_file = ::File.join( load_path, 'lib', gem_directory_name ) + '.rb'
     require_relative( ::File.expand_path( gem_require_file ) )

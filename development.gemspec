@@ -5,7 +5,7 @@ Gem::Specification.new do |spec|
 
   spec.name                      = 'development'
   spec.rubyforge_project         = 'development'
-  spec.version                   = '1.1.1'
+  spec.version                   = '1.1.2'
 
   spec.summary                   = 'Cause gem require (require \'gem\') to load a path other than the RubyGems installation.'
   spec.description               = 'Intercept gem-require expression (require \'gem\') and require version at alternative path (such as a development version).'
