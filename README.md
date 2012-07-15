@@ -4,7 +4,13 @@ http://rubygems.org/gems/development
 
 # Summary #
 
-Cause "require 'gem'" to load a path other than the RubyGems installation.
+Cause
+
+```ruby
+  require 'gem'"
+```
+
+to load a path other than the RubyGems installation.
 
 # Description #
 
