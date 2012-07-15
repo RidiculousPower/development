@@ -107,7 +107,7 @@ gem( 'to_lambda' ).directory( :ruby )
 enable! :ruby, :hooked_objects, :compositing_objects, :parallel_ancestry
 ```
 
-## Bundler Usage ##
+## Using Development with Bundler ##
 
 Development plays well with bundler. The only caveat is that you have to require Development before Bundler.require:
 
