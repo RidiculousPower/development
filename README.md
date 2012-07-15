@@ -4,7 +4,7 @@ http://rubygems.org/gems/development
 
 # Summary #
 
-Manage development contexts, particularly in the context of nested gem dependencies being developed side by side.
+Cause "require 'gem'" to load a path other than the RubyGems installation.
 
 # Description #
 
@@ -37,21 +37,25 @@ end
 
 Doing this rather than simply requiring development ensures that Development can work transparently without requiring even a development dependency.
 
-## 2. Configure Gems Development Should Intercept ##
+## 2. Configure Gems That Development Should Override ##
 
 The primary interface to development is the **.development.rb** configuration file, which should be placed in the user's home directory.
 
 I would make project-specific .development.rb files a requirement (to avoid accidentally enabling it) but I don't think there is a reliable way to find the project directory based on the require. If you know a way, please let me know!
 
-### Configuration File Example ###
+### The .development.rb Configuration File ###
 
 #### Short Example ####
+
+The shortest possible example is a one-liner:
 
 ```ruby
 enable! :parallel_ancestry => '~/Projects/rp/ruby/parallel_ancestry'
 ```
 
 #### Extended Example ####
+
+But other configuration possibilities are provided for more complex configurations:
 
 ```ruby
 ###
