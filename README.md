@@ -35,7 +35,7 @@ end
 
 Doing this rather than simply requiring development ensures that Development can work transparently without requiring even a development dependency.
 
-## 2. Configure Gems That Development Should Override ##
+## 2. Configure Which Gems Development Should Override ##
 
 The primary interface to development is the **.development.rb** configuration file, which should be placed in the user's home directory.
 
